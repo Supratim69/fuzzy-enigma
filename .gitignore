@@ -2,6 +2,7 @@
 node_modules/
 
 recipes.csv
+ingest-cache/
 
 # Build output
 dist/
