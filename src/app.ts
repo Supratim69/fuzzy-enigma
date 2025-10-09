@@ -5,7 +5,10 @@ import compression from "compression";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import { logger } from "./config/logger.js";
-import indexRouter from "./routes/index.js";
+import searchRouter from "./routes/search.js";
+import smartSearchRouter from "./routes/smartSearch.js";
+import recipesRouter from "./routes/recipes.js";
+import matchRouter from "./routes/match.js";
 
 dotenv.config();
 
@@ -23,11 +26,14 @@ app.use(
     })
 );
 
-app.use("/api", indexRouter);
-
 app.get("/health", (_req, res) =>
     res.status(200).json({ status: "ok", uptime: process.uptime() })
 );
+
+app.use("/api", searchRouter); // POST /api/search
+app.use("/api", smartSearchRouter); // POST /api/smart-search
+app.use("/api", recipesRouter); // GET  /api/recipes/:parentId
+app.use("/api", matchRouter); // POST /api/recipes/match
 
 app.use((_req, res) => res.status(404).json({ error: "not_found" }));
 
