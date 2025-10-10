@@ -35,11 +35,12 @@ export async function postSearch(req: Request, res: Response) {
             topK: queryTopK,
             includeMetadata: true,
             includeValues: false,
-            namespace: namespace || defaultNs,
             filter: pineconeFilter,
         };
 
-        const reply = await pineconeIndex.query({ queryRequest });
+        const reply = await pineconeIndex
+            .namespace(namespace || defaultNs)
+            .query(queryRequest);
         const matches = reply.matches || [];
 
         const parents = aggregateMatches(matches, topK);

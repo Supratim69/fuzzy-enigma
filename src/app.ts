@@ -26,12 +26,12 @@ app.use(
     })
 );
 
-app.get("/health", (_req, res) =>
+app.get("/api/health", (_req, res) =>
     res.status(200).json({ status: "ok", uptime: process.uptime() })
 );
 
 app.use("/api", searchRouter); // POST /api/search
-app.use("/api", smartSearchRouter); // POST /api/smart-search
+// app.use("/api", smartSearchRouter); // POST /api/smart-search --- removing this as it doesn't make sense to have two search endpoints
 app.use("/api", recipesRouter); // GET  /api/recipes/:parentId
 app.use("/api", matchRouter); // POST /api/recipes/match
 

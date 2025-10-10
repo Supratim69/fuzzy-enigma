@@ -12,13 +12,54 @@ let smartCache: Record<string, any> = {};
 let geminiClient: GoogleGenAI | null = null;
 if (fs.existsSync(SMART_CACHE)) smartCache = fs.readJSONSync(SMART_CACHE);
 
+function extractTokensFromResponse(response: any): number {
+    if (!response) return 0;
+    const usageCandidates = [
+        response.usage,
+        response.usageMetadata,
+        response.response?.usage,
+        response.result?.usage,
+        response.output?.[0]?.usage,
+        response.usage?.totalTokenCount,
+    ];
+
+    for (const u of usageCandidates) {
+        if (!u) continue;
+        if (typeof u === "number") return u;
+        if (typeof u.totalTokenCount === "number") return u.totalTokenCount;
+        if (typeof u.total_tokens === "number") return u.total_tokens;
+        if (typeof u.total === "number") return u.total;
+        if (
+            typeof u.promptTokens === "number" &&
+            typeof u.completionTokens === "number"
+        )
+            return u.promptTokens + u.completionTokens;
+    }
+    return 0;
+}
+
+function extractTextFromContentPiece(piece: any): string {
+    if (!piece) return "";
+    if (typeof piece === "string") return piece;
+    if (typeof piece.text === "string") return piece.text;
+    if (typeof piece.content === "string") return piece.content;
+    if (piece.type === "output_text" && typeof piece.text === "string")
+        return piece.text;
+    if (Array.isArray(piece.content)) {
+        return piece.content.map(extractTextFromContentPiece).join("\n");
+    }
+    try {
+        return JSON.stringify(piece);
+    } catch {
+        return String(piece);
+    }
+}
+
 function getGeminiClient() {
     if (geminiClient) return geminiClient;
-
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     if (!apiKey)
         throw new Error("GEMINI_API_KEY is required for Gemini API access");
-
     geminiClient = new GoogleGenAI({ apiKey });
     return geminiClient;
 }
@@ -37,62 +78,52 @@ export async function callGemini(
     const request: any = {
         model,
         contents: prompt,
-        config: {
-            temperature,
-            maxOutputTokens,
-        },
+        config: { temperature, maxOutputTokens },
     };
 
     try {
         const response: any = await client.models.generateContent(request);
 
-        let text = "";
-        if (typeof response.text === "string" && response.text.length > 0) {
-            text = response.text;
-        } else if (
-            Array.isArray(response.candidates) &&
-            response.candidates.length
+        if (typeof response?.text === "string" && response.text.length > 0) {
+            const tokensUsed = extractTokensFromResponse(response);
+            return { text: response.text, tokensUsed };
+        }
+
+        if (
+            Array.isArray(response?.candidates) &&
+            response.candidates.length > 0
         ) {
-            text = response.candidates
-                .map((c: any) => c.text || c.content || "")
-                .join("\n");
-        } else if (Array.isArray(response.results) && response.results.length) {
-            text = response.results
-                .map((r: any) => r.text || r.output?.text || "")
-                .join("\n");
-        } else if (response.output?.[0]?.content) {
-            text = response.output
-                .map((o: any) => (o.content || "").toString())
-                .join("\n");
-        } else {
-            text = JSON.stringify(response);
+            const pieces = response.candidates.map((c: any) =>
+                extractTextFromContentPiece(c.text ?? c.content ?? c)
+            );
+            const text = pieces.join("\n\n").trim();
+            const tokensUsed = extractTokensFromResponse(response);
+            return { text, tokensUsed };
         }
 
-        let tokensUsed = 0;
-        const usageCandidates = [
-            response.usage,
-            response.usageMetadata,
-            response.response?.usage,
-            response.result?.usage,
-            response.output?.[0]?.usage,
-        ];
-        for (const u of usageCandidates) {
-            if (!u) continue;
-            if (typeof u.totalTokenCount === "number") {
-                tokensUsed = u.totalTokenCount;
-                break;
-            }
-            if (typeof u.total_tokens === "number") {
-                tokensUsed = u.total_tokens;
-                break;
-            }
-            if (typeof u.total === "number") {
-                tokensUsed = u.total;
-                break;
-            }
+        if (Array.isArray(response?.results) && response.results.length > 0) {
+            const pieces = response.results.map((r: any) =>
+                extractTextFromContentPiece(r.text ?? r.output ?? r)
+            );
+            const text = pieces.join("\n\n").trim();
+            const tokensUsed = extractTokensFromResponse(response);
+            return { text, tokensUsed };
         }
 
-        return { text, tokensUsed: Number(tokensUsed || 0) };
+        if (Array.isArray(response?.output) && response.output.length > 0) {
+            const pieces = response.output.map((o: any) =>
+                extractTextFromContentPiece(o.content ?? o)
+            );
+            const text = pieces.join("\n\n").trim();
+            const tokensUsed = extractTokensFromResponse(response);
+            return { text, tokensUsed };
+        }
+
+        const fallbackText =
+            extractTextFromContentPiece(response.content ?? response) ||
+            JSON.stringify(response);
+        const tokensUsed = extractTokensFromResponse(response);
+        return { text: fallbackText, tokensUsed };
     } catch (err: any) {
         const status = err?.status || err?.code || err?.statusCode || "";
         const msg = err?.message || JSON.stringify(err);
@@ -114,7 +145,6 @@ export async function postSmartSearch(req: Request, res: Response) {
         const namespace = body.namespace || undefined;
         const cacheKey = JSON.stringify({ query, filters, topK });
 
-        // cache check
         if (body.useCache !== false && smartCache[cacheKey]) {
             return res.json({ ...smartCache[cacheKey], cached: true });
         }
@@ -138,15 +168,15 @@ export async function postSmartSearch(req: Request, res: Response) {
             vector: qVec,
             topK: queryTopK,
             includeMetadata: true,
-            namespace: namespace || defaultNs,
             filter:
                 filters && Object.keys(filters).length ? filters : undefined,
         };
-        const reply = await pineconeIndex.query({ queryRequest });
+        const reply = await pineconeIndex
+            .namespace(namespace || defaultNs)
+            .query(queryRequest);
         const matches = reply.matches || [];
         const parents = aggregateMatches(matches, topK);
 
-        // for top parents, collect top chunks to build context
         const selected: {
             parentId: string;
             score: number;
@@ -160,7 +190,6 @@ export async function postSmartSearch(req: Request, res: Response) {
         }[] = [];
 
         for (const p of parents.slice(0, topK)) {
-            // guard matchedChunks (some parents might not have matchedChunks)
             const matched = Array.isArray(p.matchedChunks)
                 ? p.matchedChunks
                 : [];

@@ -78,13 +78,10 @@ export async function postMatchByIngredients(req: Request, res: Response) {
         const qText = ingredients.join(" ");
         const qVecs = await embeddingsClient!.embedDocuments([qText]);
         const qVec = qVecs[0];
-        const reply = await pineconeIndex.query({
-            queryRequest: {
-                vector: qVec,
-                topK: 50,
-                includeMetadata: true,
-                namespace,
-            },
+        const reply = await pineconeIndex.namespace(namespace).query({
+            vector: qVec,
+            topK: 50,
+            includeMetadata: true,
         });
         const matches = reply.matches || [];
         const parents = aggregateMatches(matches, 50);
