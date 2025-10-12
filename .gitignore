@@ -19,9 +19,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Runtime data
+# Environment variables and sensitive data
 .env
 .env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # VSCode
 .vscode/
@@ -60,6 +64,15 @@ ehthumbs.db
 
 # OneDrive syncing artifacts
 ~$*
+
+# Database and Prisma
+prisma/migrations/
+*.db
+*.sqlite
+*.sqlite3
+
+# Kiro IDE settings
+.kiro/
 
 # Dotfiles you might want to keep: remove the next line if you commit your workspace settings
 .vscode/*
