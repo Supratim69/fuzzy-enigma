@@ -10,8 +10,12 @@ import {
     batchRemoveFavorites,
     getFavoritesCount,
 } from "../controllers/favoritesController.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// Apply authentication middleware to all favorites routes
+router.use(requireAuth);
 
 // Get all favorites for a user
 router.get("/users/:userId/favorites", getUserFavorites);

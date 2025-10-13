@@ -6,31 +6,36 @@ generator client {
 }
 
 datasource db {
-  provider = "cockroachdb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
-  relationMode = "prisma"
 }
 
 model User {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id             String    @id @default(cuid())
   name           String
   email          String    @unique
-  authProvider   String    @map("auth_provider")
-  avatarUrl      String?   @map("avatar_url")
-  dietPreference String?   @map("diet_preference")
+  emailVerified  Boolean   @default(false) @map("email_verified")
+  image          String?
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
+  // Legacy fields (keeping for backward compatibility)
+  authProvider   String?   @map("auth_provider")
+  avatarUrl      String?   @map("avatar_url")
+  dietPreference String?   @map("diet_preference")
+
+  // Relations
   favorites      Favorite[]
+  accounts       Account[]
+  sessions       Session[]
 
   @@index([email])
-  @@index([authProvider])
   @@map("users")
 }
 
 model Favorite {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String    @map("user_id") @db.Uuid
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
   recipeId    String    @map("recipe_id")
   recipeName  String    @map("recipe_name")
   recipeImage String?   @map("recipe_image")
@@ -46,4 +51,53 @@ model Favorite {
   @@index([deletedAt])
   @@index([userId, deletedAt])
   @@map("favorites")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  accountId         String  @map("account_id")
+  providerId        String  @map("provider_id")
+  userId            String  @map("user_id")
+  accessToken       String? @map("access_token")
+  refreshToken      String? @map("refresh_token")
+  idToken           String? @map("id_token")
+  accessTokenExpiresAt DateTime? @map("access_token_expires_at") @db.Timestamptz
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz
+  scope             String?
+  password          String?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([identifier, value])
+  @@map("verifications")
 }

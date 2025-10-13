@@ -5,6 +5,7 @@ import compression from "compression";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import { logger } from "./config/logger.js";
+import authRouter from "./routes/auth.js";
 import searchRouter from "./routes/search.js";
 // import smartSearchRouter from "./routes/smartSearch.js";
 import recipesRouter from "./routes/recipes.js";
@@ -32,6 +33,9 @@ app.use(
 app.get("/health", (_req, res) =>
     res.status(200).json({ status: "ok", uptime: process.uptime() })
 );
+
+// Auth routes (must be before other API routes)
+app.use("/api", authRouter); // All auth endpoints: /api/auth/*
 
 app.use("/api", searchRouter); // POST /api/search
 // app.use("/api", smartSearchRouter); // POST /api/smart-search --- removing this as it doesn't make sense to have two search endpoints
