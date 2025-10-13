@@ -18,6 +18,10 @@ export const auth = betterAuth({
     session: {
         expiresIn: 60 * 60 * 24 * 7, // 7 days
         updateAge: 60 * 60 * 24, // 1 day
+        cookieCache: {
+            enabled: true,
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+        },
     },
     user: {
         additionalFields: {
@@ -37,6 +41,12 @@ export const auth = betterAuth({
     logger: {
         level: process.env.NODE_ENV === "development" ? "debug" : "info",
         disabled: false,
+    },
+    advanced: {
+        crossSubDomainCookies: {
+            enabled: false, // Set to true if using subdomains
+        },
+        cookiePrefix: "better-auth",
     },
 });
 

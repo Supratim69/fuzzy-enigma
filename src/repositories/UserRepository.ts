@@ -397,6 +397,48 @@ export class UserRepository {
             return false;
         }
     }
+
+    /**
+     * Get user's diet preference
+     * @param id - User ID
+     * @returns Promise with diet preference or null
+     */
+    async getDietPreference(
+        id: string
+    ): Promise<{ success: boolean; data?: string | null; error?: string }> {
+        try {
+            if (!id?.trim()) {
+                return {
+                    success: false,
+                    error: "User ID is required",
+                };
+            }
+
+            const user = await prisma.user.findUnique({
+                where: { id: id.trim() },
+                select: { dietPreference: true },
+            });
+
+            if (!user) {
+                return {
+                    success: false,
+                    error: "User not found",
+                };
+            }
+
+            return {
+                success: true,
+                data: user.dietPreference,
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: `Failed to get diet preference: ${
+                    error instanceof Error ? error.message : "Unknown error"
+                }`,
+            };
+        }
+    }
 }
 
 // Export singleton instance

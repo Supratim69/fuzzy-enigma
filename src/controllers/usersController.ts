@@ -111,7 +111,7 @@ export async function getUserByEmail(req: Request, res: Response) {
  * Update user
  * PUT /api/users/:userId
  */
-export async function updateUser(req: Request, res: Response) {
+export async function updateUser(req: any, res: Response) {
     try {
         const { userId } = req.params;
         const { name, email, authProvider, avatarUrl, dietPreference } =
@@ -119,6 +119,14 @@ export async function updateUser(req: Request, res: Response) {
 
         if (!userId) {
             return res.status(400).json({ error: "User ID is required" });
+        }
+
+        // Ensure user can only update their own profile
+        if (req.user && req.user.id !== userId) {
+            return res.status(403).json({
+                error: "forbidden",
+                message: "You can only update your own profile",
+            });
         }
 
         const updateData: UpdateUserInput = {};
@@ -245,6 +253,44 @@ export async function checkEmailExists(req: Request, res: Response) {
         });
     } catch (error) {
         console.error("checkEmailExists error:", error);
+        return res.status(500).json({
+            error: "internal_error",
+            detail: String(error),
+        });
+    }
+}
+
+/**
+ * Get user's diet preference
+ * GET /api/users/:userId/diet-preference
+ */
+export async function getDietPreference(req: any, res: Response) {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({ error: "User ID is required" });
+        }
+
+        // Ensure user can only access their own diet preference
+        if (req.user && req.user.id !== userId) {
+            return res.status(403).json({
+                error: "forbidden",
+                message: "You can only access your own diet preference",
+            });
+        }
+
+        const result = await userRepository.getDietPreference(userId);
+
+        if (!result.success) {
+            return res.status(404).json({ error: result.error });
+        }
+
+        return res.json({
+            dietPreference: result.data,
+        });
+    } catch (error) {
+        console.error("getDietPreference error:", error);
         return res.status(500).json({
             error: "internal_error",
             detail: String(error),
