@@ -30,6 +30,8 @@ app.use(
             const allowedOrigins = [
                 process.env.CLIENT_URL || "http://localhost:3000",
                 "http://localhost:3000",
+                "https://recipe-chef.vercel.app",
+                "https://chef.supratimg.in",
             ];
 
             if (allowedOrigins.includes(origin)) {
