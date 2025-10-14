@@ -77,3 +77,4 @@ prisma/migrations/
 
 # Dotfiles you might want to keep: remove the next line if you commit your workspace settings
 .vscode/*
+.vercel

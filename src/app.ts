@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import helmet from "helmet";
 import compression from "compression";
 import morgan from "morgan";
 import dotenv from "dotenv";
@@ -17,8 +16,6 @@ import usersRouter from "./routes/users.js";
 dotenv.config();
 
 const app = express();
-
-app.use(helmet());
 
 // CORS configuration for frontend integration
 app.use(
