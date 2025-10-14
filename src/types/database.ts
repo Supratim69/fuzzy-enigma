@@ -47,7 +47,7 @@ export interface User extends Timestamped {
     id: string;
     name: string;
     email: string;
-    authProvider: string;
+    authProvider: string | null;
     avatarUrl?: string | null;
     dietPreference?: string | null;
 }
