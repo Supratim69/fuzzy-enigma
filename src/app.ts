@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import helmet from "helmet";
+import { default as helmet } from "helmet";
 import compression from "compression";
 import morgan from "morgan";
 import dotenv from "dotenv";
