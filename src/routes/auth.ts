@@ -19,6 +19,15 @@ const handleBetterAuth = async (req: any, res: any, next: any) => {
         const host = req.get("host") || "localhost:4000";
         const fullUrl = `${protocol}://${host}${req.originalUrl || req.url}`;
 
+        // Log the URL construction for debugging
+        console.log(`[BetterAuth] URL Construction:`, {
+            protocol,
+            host,
+            originalUrl: req.originalUrl,
+            url: req.url,
+            fullUrl,
+        });
+
         console.log(`[BetterAuth] Processing: ${req.method} ${fullUrl}`);
         console.log(`[BetterAuth] Original URL: ${req.originalUrl}`);
         console.log(`[BetterAuth] URL: ${req.url}`);

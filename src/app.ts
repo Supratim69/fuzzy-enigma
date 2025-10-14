@@ -72,6 +72,7 @@ app.use("/api", searchRouter); // POST /api/search
 // app.use("/api", smartSearchRouter); // POST /api/smart-search --- removing this as it doesn't make sense to have two search endpoints
 app.use("/api", recipesRouter); // GET  /api/recipes/:parentId
 app.use("/api", matchRouter); // POST /api/recipes/match
+
 app.use("/api", uploadRouter); // POST /api/upload
 app.use("/api", favoritesRouter); // Favorites API endpoints
 app.use("/api", usersRouter); // Users API endpoints

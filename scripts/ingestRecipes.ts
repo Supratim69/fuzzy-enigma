@@ -11,7 +11,7 @@ dotenv.config();
 /* -------------------------
    Config / Env
    ------------------------- */
-const CSV_PATH = process.env.CSV_PATH || "recipes.csv";
+const CSV_PATH = process.env.CSV_PATH || "recipes_with_images.csv";
 const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 const PINECONE_ENV =
     process.env.PINECONE_ENV || process.env.PINECONE_ENVIRONMENT;
@@ -78,9 +78,12 @@ function buildPrefix(row: any) {
         .split(/[,;|\n]/)
         .map((s: string) => s.trim().toLowerCase())
         .filter(Boolean);
-    const tags = safeTrim(
-        row.Cuisine || row.Course || row.Diet || row.tags || row.cuisine || ""
-    );
+
+    const cuisine = safeTrim(row.Cuisine || row.cuisine || "");
+    const course = safeTrim(row.Course || row.course || "");
+    const diet = safeTrim(row.Diet || row.diet || "");
+    const tags = [cuisine, course, diet].filter(Boolean).join(", ");
+
     const prefixParts = [];
     if (title) prefixParts.push(title);
     if (ingredients.length)
@@ -186,7 +189,6 @@ interface UpsertItem {
 }
 
 async function runIngest() {
-    // Build per-row chunk list, but process rows in streaming batching to save memory
     console.info("Starting ingest loop...");
     const embedBatchTexts: string[] = [];
     const embedBatchMeta: {
@@ -223,19 +225,24 @@ async function runIngest() {
 
         // save full recipe text/object for later retrieval
         const fullInstructions = getFullInstructions(row);
+        const cuisine = safeTrim(row.Cuisine || row.cuisine || "");
+        const course = safeTrim(row.Course || row.course || "");
+        const diet = safeTrim(row.Diet || row.diet || "");
+        const combinedTags = [cuisine, course, diet].filter(Boolean).join(", ");
+        const recipeUrl = safeTrim(row.URL || row.url || "");
+        const imageURL = safeTrim(row.ImageURL || row.imageUrl || "");
+
         const fullRecipeObj = {
             parentId,
             title,
             ingredients: rawIngredients,
             instructions: fullInstructions,
-            tags: safeTrim(
-                row.Cuisine ||
-                    row.Course ||
-                    row.Diet ||
-                    row.tags ||
-                    row.cuisine ||
-                    ""
-            ),
+            tags: combinedTags,
+            cuisine,
+            course,
+            diet,
+            imageURL,
+            recipeUrl,
             metadata: {
                 prepTime: row.PrepTimeInMins
                     ? Number(row.PrepTimeInMins)
@@ -270,7 +277,7 @@ async function runIngest() {
                 chunkIndex: ci,
                 totalChunks: finalChunks.length,
                 title,
-                tags: fullRecipeObj.tags,
+                tags: combinedTags,
                 // keep ingredients as array for metadata filtering
                 ingredients: rawIngredients
                     ? rawIngredients
@@ -282,6 +289,10 @@ async function runIngest() {
                 prepTime: fullRecipeObj.metadata.prepTime,
                 cookTime: fullRecipeObj.metadata.cookTime,
                 servings: fullRecipeObj.metadata.servings,
+                cuisine: cuisine,
+                course: course,
+                diet: diet,
+                imageURL: imageURL,
             };
 
             embedBatchTexts.push(pageContent);
@@ -320,7 +331,7 @@ async function runIngest() {
     checkpoint.lastProcessedRow = rows.length - 1;
     fs.writeJSONSync(CHECKPOINT_FILE, checkpoint);
     fs.writeJSONSync(FULL_RECIPES_FILE, fullRecipes);
-    console.info("Ingest finished. final checkpoint saved.");
+    console.info("Ingest finished. Final checkpoint saved.");
 }
 
 async function flushEmbedBatchAndUpsert(

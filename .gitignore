@@ -2,6 +2,7 @@
 node_modules/
 
 recipes.csv
+recipes_with_images.csv
 ingest-cache/
 
 # Build output
