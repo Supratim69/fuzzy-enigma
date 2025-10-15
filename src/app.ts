@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import compression from "compression";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { logger } from "./config/logger.js";
 import authRouter from "./routes/auth.js";
@@ -51,6 +52,7 @@ app.use(
 );
 
 app.use(compression());
+app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
