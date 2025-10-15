@@ -12,25 +12,21 @@ if (!PINECONE_INDEX) {
 }
 
 async function createPineconeIndex() {
-    console.log("Initializing Pinecone client...");
     const pinecone = new PineconeClient();
 
     try {
         // Check if index already exists
-        console.log(`Checking if index '${PINECONE_INDEX}' exists...`);
         const indexList = await pinecone.listIndexes();
         const existingIndex = indexList.indexes?.find(
             (index) => index.name === PINECONE_INDEX
         );
 
         if (existingIndex) {
-            console.log(`✅ Index '${PINECONE_INDEX}' already exists`);
             console.log("Index details:", existingIndex);
             return;
         }
 
         // Create the index
-        console.log(`Creating Pinecone index: ${PINECONE_INDEX}`);
         await pinecone.createIndex({
             name: PINECONE_INDEX,
             dimension: 768, // Gemini text-embedding-004 dimension
@@ -43,12 +39,8 @@ async function createPineconeIndex() {
             },
         });
 
-        console.log(
-            `✅ Successfully created Pinecone index: ${PINECONE_INDEX}`
-        );
 
         // Wait a moment for the index to be ready
-        console.log("Waiting for index to be ready...");
         let isReady = false;
         let attempts = 0;
         const maxAttempts = 30;
@@ -60,7 +52,6 @@ async function createPineconeIndex() {
                 );
                 if (indexDescription.status?.ready) {
                     isReady = true;
-                    console.log("✅ Index is ready!");
                 } else {
                     console.log(
                         `Index status: ${indexDescription.status?.state}, waiting...`
@@ -69,7 +60,6 @@ async function createPineconeIndex() {
                     attempts++;
                 }
             } catch (error) {
-                console.log("Index not ready yet, waiting...");
                 await new Promise((resolve) => setTimeout(resolve, 2000));
                 attempts++;
             }

@@ -69,7 +69,6 @@ export async function initializeDatabase(
 
         if (attempt < maxRetries) {
             const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff
-            console.log(`Retrying in ${delay}ms...`);
             await new Promise((resolve) => setTimeout(resolve, delay));
         }
     }
@@ -86,7 +85,6 @@ export async function initializeDatabase(
 export async function disconnectDatabase(): Promise<void> {
     try {
         await prisma.$disconnect();
-        console.log("Database disconnected successfully");
     } catch (error) {
         const errorMessage = handleDatabaseError(error);
         console.error("Error disconnecting from database:", errorMessage);

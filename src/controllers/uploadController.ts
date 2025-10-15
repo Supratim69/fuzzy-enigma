@@ -70,7 +70,6 @@ export async function uploadImage(req: Request, res: Response) {
         };
 
         await s3.upload(uploadParams).promise();
-        console.log(`File uploaded to S3: ${filename}`);
 
         // Get Gemini client and analyze image
         const genAI = getGeminiClient();

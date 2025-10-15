@@ -4,25 +4,15 @@ import { aggregateMatches } from "../utils/aggregate.js";
 
 export async function postSearch(req: Request, res: Response) {
     try {
-        console.log("[Search] Received search request:", req.body);
-
         const body = req.body || {};
         const query = (body.query || "").toString().trim();
         if (!query) {
-            console.log("[Search] Error: No query provided");
             return res.status(400).json({ error: "query is required" });
         }
 
         const filters = body.filters;
         const topK = Math.min(Number(body.topK || 10), 10); // Ensure max 10 results
         const namespace = body.namespace || undefined;
-
-        console.log("[Search] Processing query:", {
-            query,
-            topK,
-            filters,
-            namespace,
-        });
 
         const {
             embeddingsClient,
@@ -71,10 +61,6 @@ export async function postSearch(req: Request, res: Response) {
             })),
         }));
 
-        console.log("[Search] Returning results:", {
-            count: out.length,
-            query,
-        });
         return res.json({ results: out });
     } catch (err) {
         console.error("searchController error:", err);
