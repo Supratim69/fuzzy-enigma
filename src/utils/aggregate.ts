@@ -9,6 +9,7 @@ export type ParentResult = {
     score: number;
     title?: string;
     snippet?: string;
+    instructions?: string;
     matchedChunks: MatchInfo[];
     metadata?: any;
 };
@@ -43,6 +44,23 @@ export function aggregateMatches(
             (firstMeta?.title ? `${firstMeta.title} — ` : "") +
             (firstMeta?.snippet || firstMeta?.text?.slice?.(0, 160) || "");
         const finalSnippet = snippet ? snippet.slice(0, 300) : undefined;
+
+        // Combine instructions from all matched chunks, sorted by chunk index
+        const instructionChunks = hits
+            .filter((hit) => hit.metadata?.instructions)
+            .sort(
+                (a, b) =>
+                    (a.metadata?.chunkIndex || 0) -
+                    (b.metadata?.chunkIndex || 0)
+            )
+            .map((hit) => hit.metadata.instructions)
+            .filter(Boolean);
+
+        const combinedInstructions =
+            instructionChunks.length > 0
+                ? instructionChunks.join(" ").trim()
+                : undefined;
+
         const result: ParentResult = {
             parentId,
             score: aggScore,
@@ -52,6 +70,9 @@ export function aggregateMatches(
         };
         if (finalSnippet) {
             result.snippet = finalSnippet;
+        }
+        if (combinedInstructions) {
+            result.instructions = combinedInstructions;
         }
         results.push(result);
     }

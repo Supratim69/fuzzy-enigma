@@ -62,6 +62,7 @@ export async function postSearch(req: Request, res: Response) {
             score: Number(p.score.toFixed(6)),
             title: p.title,
             snippet: p.snippet,
+            instructions: p.instructions, // Include instructions from metadata
             matchedChunks: p.matchedChunks.slice(0, 5).map((m) => ({
                 id: m.id,
                 score: m.score,

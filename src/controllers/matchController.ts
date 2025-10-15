@@ -55,6 +55,7 @@ export async function postMatchByIngredients(req: Request, res: Response) {
                     score: 1,
                     missingIngredients: [],
                     recipe: r,
+                    instructions: (r as any).instructions, // Include instructions
                 });
             } else if (matchScore >= 0.6) {
                 exactMatches.push({
@@ -62,6 +63,7 @@ export async function postMatchByIngredients(req: Request, res: Response) {
                     score: matchScore,
                     missingIngredients: missing,
                     recipe: r,
+                    instructions: (r as any).instructions, // Include instructions
                 });
             }
         }
@@ -105,6 +107,7 @@ export async function postMatchByIngredients(req: Request, res: Response) {
                 matchScore,
                 missingIngredients: missing,
                 fullRecipeSnippet: r && r.title ? r.title : undefined,
+                instructions: p.instructions || r?.instructions, // Include instructions from vector search or cache
                 metadata: r?.metadata || {},
             };
         });

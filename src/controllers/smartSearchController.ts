@@ -239,7 +239,9 @@ export async function postSmartSearch(req: Request, res: Response) {
                     400
                 )}\n`;
                 prompt += `Instructions snippet: ${(
-                    c.metadata?.text ?? ""
+                    c.metadata?.instructions ??
+                    c.metadata?.text ??
+                    ""
                 ).slice(0, 500)}\n\n`;
             }
         }
