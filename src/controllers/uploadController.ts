@@ -78,10 +78,19 @@ export async function uploadImage(req: Request, res: Response) {
             model: "gemini-2.0-flash-exp",
         });
 
-        const prompt = `You are a food vision expert. Identify all distinct edible ingredients visible in this image.
+        const prompt = `You are a food vision expert. Analyze this image and identify all distinct edible ingredients visible.
+
+IMPORTANT RULES:
+1. Only identify actual food ingredients (vegetables, fruits, spices, proteins, etc.)
+2. If this is not a food image or contains no visible ingredients, respond with an empty array: []
+3. Ignore non-food items like utensils, plates, packaging, or decorative elements
+4. Be specific with ingredient names (e.g., "red bell pepper" not just "pepper")
+
 Respond as a JSON array of ingredient names in lowercase.
-Example:
-["tomato", "onion", "basil", "garlic"]`;
+Examples:
+- Food image: ["tomato", "red onion", "fresh basil", "garlic cloves"]
+- Non-food image: []
+- No clear ingredients: []`;
 
         const imagePart = {
             inlineData: {
@@ -103,9 +112,38 @@ Example:
             // Try to extract JSON from the response if it's wrapped in markdown
             const jsonMatch = text.match(/\[.*\]/s);
             if (jsonMatch) {
-                ingredients = JSON.parse(jsonMatch[0]);
+                try {
+                    ingredients = JSON.parse(jsonMatch[0]);
+                } catch (secondParseError) {
+                    console.error(
+                        "Second JSON parse failed:",
+                        secondParseError
+                    );
+                    return res.status(400).json({
+                        error: "no_ingredients_detected",
+                        message:
+                            "Could not detect any ingredients in this image. Please try a clearer photo of food ingredients.",
+                    });
+                }
             } else {
-                throw new Error("Invalid JSON response from Gemini");
+                // Check if the response indicates no food was found
+                const lowerText = text.toLowerCase();
+                if (
+                    lowerText.includes("no ingredients") ||
+                    lowerText.includes("not food") ||
+                    lowerText.includes("no edible")
+                ) {
+                    return res.status(400).json({
+                        error: "no_food_detected",
+                        message:
+                            "This doesn't appear to be a food image. Please upload a photo containing visible ingredients.",
+                    });
+                }
+                return res.status(400).json({
+                    error: "no_ingredients_detected",
+                    message:
+                        "Could not detect any ingredients in this image. Please try a clearer photo of food ingredients.",
+                });
             }
         }
 
@@ -114,7 +152,20 @@ Example:
             !Array.isArray(ingredients) ||
             !ingredients.every((item) => typeof item === "string")
         ) {
-            throw new Error("Invalid response format from Gemini");
+            return res.status(400).json({
+                error: "invalid_response",
+                message:
+                    "Could not process the image properly. Please try again with a different photo.",
+            });
+        }
+
+        // Check if no ingredients were detected
+        if (ingredients.length === 0) {
+            return res.status(400).json({
+                error: "no_ingredients_detected",
+                message:
+                    "No ingredients were detected in this image. Please try a photo with visible food ingredients.",
+            });
         }
 
         return res.json({
