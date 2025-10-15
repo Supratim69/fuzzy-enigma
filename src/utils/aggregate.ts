@@ -6,6 +6,7 @@ export type MatchInfo = {
 
 export type ParentResult = {
     parentId: string;
+    recipeId?: string; // Add the UUID field
     score: number;
     title?: string;
     snippet?: string;
@@ -63,6 +64,7 @@ export function aggregateMatches(
 
         const result: ParentResult = {
             parentId,
+            recipeId: firstMeta?.recipeId, // Extract the UUID from Pinecone metadata
             score: aggScore,
             title: firstMeta?.title,
             matchedChunks: hits,

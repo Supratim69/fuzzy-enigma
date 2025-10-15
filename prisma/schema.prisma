@@ -33,17 +33,44 @@ model User {
   @@map("users")
 }
 
+model Recipe {
+  id            String    @id @default(uuid()) @db.Uuid
+  parentId      String?   @map("parent_id") // Original CSV identifier for backwards compatibility
+  title         String    @db.VarChar(500)
+  ingredients   String?   @db.Text
+  instructions  String?   @db.Text
+  tags          String?   @db.VarChar(500)
+  cuisine       String?   @db.VarChar(100)
+  course        String?   @db.VarChar(100)
+  diet          String?   @db.VarChar(100)
+  imageUrl      String?   @map("image_url") @db.Text
+  recipeUrl     String?   @map("recipe_url") @db.Text
+  prepTimeMins  Int?      @map("prep_time_mins")
+  cookTimeMins  Int?      @map("cook_time_mins")
+  servings      Int?
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  favorites     Favorite[]
+
+  @@index([parentId])
+  @@index([title])
+  @@index([cuisine])
+  @@index([diet])
+  @@map("recipes")
+}
+
 model Favorite {
   id          String    @id @default(cuid())
   userId      String    @map("user_id")
-  recipeId    String    @map("recipe_id")
-  recipeName  String    @map("recipe_name")
-  recipeImage String?   @map("recipe_image")
-  cuisine     String?
+  recipeId    String    @map("recipe_id") @db.Uuid
   dateSaved   DateTime  @default(now()) @map("date_saved") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
+  // Relations
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe      Recipe    @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, recipeId, deletedAt])
   @@index([userId])

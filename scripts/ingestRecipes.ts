@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { parse } from "csv-parse/sync";
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { Pinecone as PineconeClient } from "@pinecone-database/pinecone";
+import { PrismaClient } from "@prisma/client";
 
 dotenv.config();
 
@@ -84,7 +85,7 @@ function buildPrefix(row: any) {
     const diet = safeTrim(row.Diet || row.diet || "");
     const tags = [cuisine, course, diet].filter(Boolean).join(", ");
 
-    const prefixParts = [];
+    const prefixParts: string[] = [];
     if (title) prefixParts.push(title);
     if (ingredients.length)
         prefixParts.push(`Ingredients: ${ingredients.join(", ")}`);
@@ -161,6 +162,10 @@ const pinecone = new PineconeClient();
 const pineconeIndex = pinecone.Index(PINECONE_INDEX);
 console.info("Connected to Pinecone index:", PINECONE_INDEX);
 
+console.info("Initializing Prisma client...");
+const prisma = new PrismaClient();
+console.info("Connected to PostgreSQL database");
+
 async function sampleEmbeddingCheck() {
     for (const r of rows) {
         const prefix = buildPrefix(r);
@@ -219,6 +224,9 @@ async function runIngest() {
             "rid-" + sha256(title + "|" + rawIngredients)
         ).toString();
 
+        // Generate UUID for both Pinecone and PostgreSQL
+        const recipeId = crypto.randomUUID();
+
         const fullInstructions = getFullInstructions(row);
         const cuisine = safeTrim(row.Cuisine || row.cuisine || "");
         const course = safeTrim(row.Course || row.course || "");
@@ -228,6 +236,7 @@ async function runIngest() {
         const imageURL = safeTrim(row.ImageURL || row.imageUrl || "");
 
         const fullRecipeObj = {
+            id: recipeId, // Add UUID to the recipe object
             parentId,
             title,
             ingredients: rawIngredients,
@@ -248,7 +257,35 @@ async function runIngest() {
                 servings: row.Servings ? Number(row.Servings) : undefined,
             },
         };
-        fullRecipes[parentId] = fullRecipeObj;
+        fullRecipes[recipeId] = fullRecipeObj; // Use UUID as key instead of parentId
+
+        // Insert recipe into PostgreSQL
+        try {
+            await (prisma as any).recipe.create({
+                data: {
+                    id: recipeId,
+                    parentId: parentId,
+                    title: title,
+                    ingredients: rawIngredients || null,
+                    instructions: fullInstructions || null,
+                    tags: combinedTags || null,
+                    cuisine: cuisine || null,
+                    course: course || null,
+                    diet: diet || null,
+                    imageUrl: imageURL || null,
+                    recipeUrl: recipeUrl || null,
+                    prepTimeMins: fullRecipeObj.metadata.prepTime || null,
+                    cookTimeMins: fullRecipeObj.metadata.cookTime || null,
+                    servings: fullRecipeObj.metadata.servings || null,
+                },
+            });
+        } catch (dbError) {
+            console.error(
+                `Failed to insert recipe ${recipeId} into database:`,
+                dbError
+            );
+            // Continue with Pinecone ingestion even if DB insert fails
+        }
 
         const prefix = buildPrefix(row);
         const chunks = chunkText(
@@ -264,7 +301,8 @@ async function runIngest() {
             const chunkId = `${parentId}#c${ci}`;
 
             const metadata: Record<string, any> = {
-                parentId,
+                recipeId, // ✅ NEW: Use UUID as primary identifier
+                parentId, // Keep for backwards compatibility
                 chunkIndex: ci,
                 totalChunks: finalChunks.length,
                 title,
@@ -410,11 +448,12 @@ async function flushUpsertBuffer(buffer: UpsertItem[]) {
    Run
    ------------------------- */
 runIngest()
-    .then(() => {
+    .then(async () => {
         console.info("All done.");
+        await prisma.$disconnect();
         process.exit(0);
     })
-    .catch((err) => {
+    .catch(async (err) => {
         console.error("Ingest failed:", err);
         try {
             fs.writeJSONSync(CHECKPOINT_FILE, checkpoint);
@@ -422,5 +461,6 @@ runIngest()
         } catch (e) {
             console.error("Failed to persist caches on error", e);
         }
+        await prisma.$disconnect();
         process.exit(1);
     });

@@ -37,13 +37,7 @@ export class FavoriteRepository {
                 };
             }
 
-            if (!favoriteData.recipeName?.trim()) {
-                return {
-                    success: false,
-                    created: false,
-                    error: "Recipe name is required and cannot be empty",
-                };
-            }
+            // Recipe name validation removed - not needed with new schema
 
             // Check if user exists
             const userExists = await prisma.user.findUnique({
@@ -75,9 +69,6 @@ export class FavoriteRepository {
                     data: {
                         deletedAt: null,
                         dateSaved: new Date(), // Update the date saved to current time
-                        recipeName: favoriteData.recipeName.trim(),
-                        recipeImage: favoriteData.recipeImage?.trim() || null,
-                        cuisine: favoriteData.cuisine?.trim() || null,
                     },
                 });
 
@@ -97,14 +88,11 @@ export class FavoriteRepository {
                 };
             }
 
-            // Create new favorite
+            // Create new favorite (include legacy fields until migration is complete)
             const favorite = await prisma.favorite.create({
                 data: {
                     userId: favoriteData.userId.trim(),
                     recipeId: favoriteData.recipeId.trim(),
-                    recipeName: favoriteData.recipeName.trim(),
-                    recipeImage: favoriteData.recipeImage?.trim() || null,
-                    cuisine: favoriteData.cuisine?.trim() || null,
                 },
             });
 
@@ -171,6 +159,9 @@ export class FavoriteRepository {
 
             const favorites = await prisma.favorite.findMany({
                 where: whereClause,
+                include: {
+                    recipe: true, // Include all recipe fields
+                },
                 orderBy: { dateSaved: "desc" },
             });
 

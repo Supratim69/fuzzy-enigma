@@ -58,7 +58,8 @@ export async function postSearch(req: Request, res: Response) {
 
         const parents = aggregateMatches(matches, topK);
         const out = parents.map((p) => ({
-            parentId: p.parentId,
+            recipeId: p.recipeId, // Include the new UUID from Pinecone metadata
+            parentId: p.parentId, // Keep for backwards compatibility
             score: Number(p.score.toFixed(6)),
             title: p.title,
             snippet: p.snippet,

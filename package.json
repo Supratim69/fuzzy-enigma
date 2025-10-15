@@ -15,7 +15,10 @@
         "db:studio": "prisma studio",
         "create:pinecone-index": "tsx scripts/createPineconeIndex.ts",
         "extract:images": "tsx scripts/extractImages.ts",
-        "ingest:recipes": "tsx scripts/ingestRecipes.ts"
+        "ingest:recipes": "tsx scripts/ingestRecipes.ts",
+        "migrate:uuid-recipes": "tsx scripts/run-complete-migration.ts",
+        "migrate:favorites": "tsx scripts/migrate-existing-favorites.ts",
+        "rollback:uuid-migration": "tsx scripts/rollback-uuid-migration.ts"
     },
     "keywords": [],
     "author": "",
@@ -66,6 +69,7 @@
         "@types/morgan": "^1.9.10",
         "@types/node": "^24.7.0",
         "@types/pino": "^7.0.4",
+        "enquirer": "^2.4.1",
         "prisma": "^5.22.0",
         "ts-node": "^10.9.2",
         "ts-node-dev": "^2.0.0",

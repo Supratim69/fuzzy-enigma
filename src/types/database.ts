@@ -59,10 +59,26 @@ export interface Favorite extends SoftDeletable {
     id: string;
     userId: string;
     recipeId: string;
-    recipeName: string;
-    recipeImage?: string | null;
-    cuisine?: string | null;
     dateSaved: Date;
+    // Recipe relationship will be included via Prisma include
+    recipe?: {
+        id: string;
+        parentId: string | null;
+        title: string;
+        ingredients: string | null;
+        instructions: string | null;
+        tags: string | null;
+        cuisine: string | null;
+        course: string | null;
+        diet: string | null;
+        imageUrl: string | null;
+        recipeUrl: string | null;
+        prepTimeMins: number | null;
+        cookTimeMins: number | null;
+        servings: number | null;
+        createdAt: Date;
+        updatedAt: Date;
+    };
 }
 
 /**
@@ -90,7 +106,8 @@ export interface UpdateUserInput {
 export interface CreateFavoriteInput {
     userId: string;
     recipeId: string;
-    recipeName: string;
+    // Legacy fields for backwards compatibility (will be ignored)
+    recipeName?: string;
     recipeImage?: string;
     cuisine?: string;
 }
