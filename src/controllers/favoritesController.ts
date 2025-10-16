@@ -1,18 +1,34 @@
 import { type Request, type Response } from "express";
 import { favoriteRepository } from "../repositories/FavoriteRepository.js";
 import type { CreateFavoriteInput } from "../types/database.js";
+import type { AuthenticatedRequest } from "../middleware/manualAuth.js";
 
 /**
  * Get all active favorites for a user
- * GET /api/users/:userId/favorites
+ * GET /api/favorites or GET /api/users/:userId/favorites
  */
-export async function getUserFavorites(req: Request, res: Response) {
+export async function getUserFavorites(
+    req: AuthenticatedRequest,
+    res: Response
+) {
     try {
-        const { userId } = req.params;
+        // Get userId from authenticated user (session-based) or URL params (backward compatibility)
+        const userId = req.user?.id || req.params.userId;
         const includeDeleted = req.query.includeDeleted === "true";
 
         if (!userId) {
             return res.status(400).json({ error: "User ID is required" });
+        }
+
+        // For backward compatibility, check if user is accessing their own data when using URL params
+        if (
+            req.params.userId &&
+            req.user?.id &&
+            req.params.userId !== req.user.id
+        ) {
+            return res
+                .status(403)
+                .json({ error: "You can only access your own favorites" });
         }
 
         const result = await favoriteRepository.findByUserId(userId, {
@@ -38,15 +54,27 @@ export async function getUserFavorites(req: Request, res: Response) {
 
 /**
  * Add a recipe to user's favorites
- * POST /api/users/:userId/favorites
+ * POST /api/favorites or POST /api/users/:userId/favorites
  */
-export async function addFavorite(req: Request, res: Response) {
+export async function addFavorite(req: AuthenticatedRequest, res: Response) {
     try {
-        const { userId } = req.params;
+        // Get userId from authenticated user (session-based) or URL params (backward compatibility)
+        const userId = req.user?.id || req.params.userId;
         const { recipeId, recipeName, recipeImage, cuisine } = req.body;
 
         if (!userId) {
             return res.status(400).json({ error: "User ID is required" });
+        }
+
+        // For backward compatibility, check if user is accessing their own data when using URL params
+        if (
+            req.params.userId &&
+            req.user?.id &&
+            req.params.userId !== req.user.id
+        ) {
+            return res
+                .status(403)
+                .json({ error: "You can only access your own favorites" });
         }
 
         if (!recipeId || !recipeName) {
@@ -89,14 +117,26 @@ export async function addFavorite(req: Request, res: Response) {
  * Remove a recipe from user's favorites (soft delete)
  * DELETE /api/users/:userId/favorites/:recipeId
  */
-export async function removeFavorite(req: Request, res: Response) {
+export async function removeFavorite(req: AuthenticatedRequest, res: Response) {
     try {
-        const { userId, recipeId } = req.params;
+        const userId = req.user?.id || req.params.userId;
+        const { recipeId } = req.params;
 
         if (!userId || !recipeId) {
             return res.status(400).json({
                 error: "User ID and Recipe ID are required",
             });
+        }
+
+        // For backward compatibility, check if user is accessing their own data when using URL params
+        if (
+            req.params.userId &&
+            req.user?.id &&
+            req.params.userId !== req.user.id
+        ) {
+            return res
+                .status(403)
+                .json({ error: "You can only access your own favorites" });
         }
 
         // First find the favorite to get its ID
@@ -135,14 +175,29 @@ export async function removeFavorite(req: Request, res: Response) {
  * Check if a recipe is favorited by a user
  * GET /api/users/:userId/favorites/:recipeId/status
  */
-export async function getFavoriteStatus(req: Request, res: Response) {
+export async function getFavoriteStatus(
+    req: AuthenticatedRequest,
+    res: Response
+) {
     try {
-        const { userId, recipeId } = req.params;
+        const userId = req.user?.id || req.params.userId;
+        const { recipeId } = req.params;
 
         if (!userId || !recipeId) {
             return res.status(400).json({
                 error: "User ID and Recipe ID are required",
             });
+        }
+
+        // For backward compatibility, check if user is accessing their own data when using URL params
+        if (
+            req.params.userId &&
+            req.user?.id &&
+            req.params.userId !== req.user.id
+        ) {
+            return res
+                .status(403)
+                .json({ error: "You can only access your own favorites" });
         }
 
         const isFavorited = await favoriteRepository.isFavorited(
@@ -168,10 +223,22 @@ export async function getFavoriteStatus(req: Request, res: Response) {
  * Toggle favorite status for a recipe
  * POST /api/users/:userId/favorites/:recipeId/toggle
  */
-export async function toggleFavorite(req: Request, res: Response) {
+export async function toggleFavorite(req: AuthenticatedRequest, res: Response) {
     try {
-        const { userId, recipeId } = req.params;
+        const userId = req.user?.id || req.params.userId;
+        const { recipeId } = req.params;
         const { recipeName, recipeImage, cuisine } = req.body;
+
+        // For backward compatibility, check if user is accessing their own data when using URL params
+        if (
+            req.params.userId &&
+            req.user?.id &&
+            req.params.userId !== req.user.id
+        ) {
+            return res
+                .status(403)
+                .json({ error: "You can only access your own favorites" });
+        }
 
         if (!userId || !recipeId) {
             return res.status(400).json({
@@ -350,12 +417,26 @@ export async function batchRemoveFavorites(req: Request, res: Response) {
  * Get favorites count for a user
  * GET /api/users/:userId/favorites/count
  */
-export async function getFavoritesCount(req: Request, res: Response) {
+export async function getFavoritesCount(
+    req: AuthenticatedRequest,
+    res: Response
+) {
     try {
-        const { userId } = req.params;
+        const userId = req.user?.id || req.params.userId;
 
         if (!userId) {
             return res.status(400).json({ error: "User ID is required" });
+        }
+
+        // For backward compatibility, check if user is accessing their own data when using URL params
+        if (
+            req.params.userId &&
+            req.user?.id &&
+            req.params.userId !== req.user.id
+        ) {
+            return res
+                .status(403)
+                .json({ error: "You can only access your own favorites" });
         }
 
         const count = await favoriteRepository.getActiveFavoritesCount(userId);

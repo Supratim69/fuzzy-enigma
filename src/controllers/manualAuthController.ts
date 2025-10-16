@@ -80,12 +80,16 @@ export const signUp = async (req: Request, res: Response) => {
             { expiresIn: JWT_EXPIRES_IN }
         );
 
-        // Set cookie
+        // Set cookie with domain configuration for production cross-subdomain support
         res.cookie("session-token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            domain:
+                process.env.NODE_ENV === "production"
+                    ? ".supratimg.in"
+                    : undefined,
         });
 
         res.status(201).json({
@@ -164,12 +168,16 @@ export const signIn = async (req: Request, res: Response) => {
             { expiresIn: JWT_EXPIRES_IN }
         );
 
-        // Set cookie
+        // Set cookie with domain configuration for production cross-subdomain support
         res.cookie("session-token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            domain:
+                process.env.NODE_ENV === "production"
+                    ? ".supratimg.in"
+                    : undefined,
         });
 
         res.json({
@@ -217,8 +225,13 @@ export const signOut = async (req: AuthenticatedRequest, res: Response) => {
             }
         }
 
-        // Clear cookie
-        res.clearCookie("session-token");
+        // Clear cookie with same domain configuration
+        res.clearCookie("session-token", {
+            domain:
+                process.env.NODE_ENV === "production"
+                    ? ".supratimg.in"
+                    : undefined,
+        });
 
         res.json({ success: true });
     } catch (error) {
