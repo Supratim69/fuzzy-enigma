@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { PrismaClient } from "@prisma/client";
 import { logger } from "./logger.js";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -34,6 +35,10 @@ export const auth = betterAuth({
     trustedOrigins: [
         process.env.CLIENT_URL || "http://localhost:3000",
         process.env.SERVER_URL || "http://localhost:4000",
+        "http://localhost:3000",
+        "https://recipe-chef.vercel.app",
+        "https://chef.supratimg.in",
+        "https://ingredients.supratimg.in", // Add your production frontend domain
     ],
     secret:
         process.env.BETTER_AUTH_SECRET ||
@@ -47,6 +52,11 @@ export const auth = betterAuth({
             enabled: false, // Set to true if using subdomains
         },
         cookiePrefix: "better-auth",
+        generateId: () => crypto.randomUUID(),
+    },
+    cookies: {
+        secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Allow cross-site cookies in production
     },
 });
 
